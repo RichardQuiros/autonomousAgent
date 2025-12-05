@@ -1,0 +1,40 @@
+Objetivo General
+
+Realizar una prueba inicial del flujo para confirmar que el agente puede operar de forma autónoma dentro del entorno, ejecutar comandos en la terminal de manera correcta y completar tareas sin intervención humana.
+
+Objetivos Específicos Mejorados
+
+Validar Capacidad de Navegación y Ejecución
+Confirmar que el agente puede desplazarse por el sistema de archivos, crear directorios, generar archivos y ejecutar scripts dentro del entorno /home/node/projects sin errores ni bloqueos.
+
+Verificar Funcionamiento del Flujo IA_PROCESS → TERMINAL
+Asegurar que los comandos emitidos en IA_PROCESS se ejecuten correctamente en TERMINAL, interpretando la salida (stdout, stderr, exitCode) para autoevaluación y ajuste autónomo del siguiente paso.
+
+Probar Ejecución de una Tarea Técnica Real
+Crear y ejecutar un programa simple (una calculadora básica en Python) que permita validar:
+
+creación de archivos,
+
+generación de contenido de código,
+
+permisos de ejecución,
+
+ejecución de procesos no interactivos.
+
+Evaluar Estabilidad y Completitud del Flujo
+Confirmar que:
+
+El agente puede iniciar y finalizar una tarea técnica correctamente.
+
+No crea procesos interactivos ni loops.
+
+Detecta y corrige errores de forma autónoma.
+
+Obtener Retroalimentación Generada por el Agente
+Una vez completada la prueba, el agente debe proporcionar en modo FLOW_CONTEXT:
+
+un análisis del desempeño del flujo,
+
+sugerencias de mejora,
+
+recomendaciones para optimizar el prompt inicial.

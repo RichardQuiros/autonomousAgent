@@ -1,0 +1,7 @@
+FLOW_CONTEXT
+1 Resume lo siguiente para que se te haga lo mas fácil retomar desde este punto (critico).
+2 Un ultra resumen pequeño preferencial no mas de 255 caracteres para un humano (opcional).
+el resumen para humano debe de estar en test formato [[[texto]]]].
+
+
+prioriza el punto 1 de lo siguiente:
