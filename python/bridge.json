@@ -1,0 +1,9 @@
+{
+  "name": "com.local.cli_bridge",
+  "description": "Bridge CLI ↔ Extension (local only)",
+  "path": "C:/Users/pqric/Documents/extensions/tooltBot/python/host.cmd",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://pjkgfpacjkfdafcppfjimceefbpnimed/"
+  ]
+}

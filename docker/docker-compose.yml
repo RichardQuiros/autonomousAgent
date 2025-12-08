@@ -1,0 +1,24 @@
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my-n8n-python:1.116.2
+    container_name: n8n
+    environment:
+      TZ: America/Bogota
+      GENERIC_TIMEZONE: America/Bogota
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+      SOCKET_HOST: host.docker.internal
+      SOCKET_PORT: "7345"
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - "C:\\Users\\pqric\\Documents\\extensions\\tooltBot\\python:/home/node/python"
+      - "C:\\Users\\pqric\\Documents\\projects:/home/node/projects"
+      - "C:\\Users\\pqric\\Documents\\n8n\\context:/data/gamegen/context"
+    restart: unless-stopped
+
+volumes:
+  n8n_data: {}
