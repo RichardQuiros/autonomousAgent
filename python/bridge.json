@@ -1,9 +1,9 @@
-{
-  "name": "com.local.cli_bridge",
-  "description": "Bridge CLI ↔ Extension (local only)",
-  "path": "C:/Users/pqric/Documents/extensions/tooltBot/python/host.cmd",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://pjkgfpacjkfdafcppfjimceefbpnimed/"
-  ]
+﻿{
+    "path":  "C:\\Users\\Usuario\\Dev\\n8n\\autonomousAgent\\python\\host.cmd",
+    "description":  "Bridge CLI Extension (local only)",
+    "name":  "com.local.cli_bridge",
+    "allowed_origins":  [
+                            "chrome-extension://pkggaghddjabliindhdpjngaiicaajhl/"
+                        ],
+    "type":  "stdio"
 }
