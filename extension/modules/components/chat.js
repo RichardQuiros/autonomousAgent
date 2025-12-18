@@ -53,8 +53,7 @@ function onNetwork(source, method, params) {
     chrome.debugger.sendCommand(source, 'Network.getResponseBody', { requestId }, (result) => {
       if (typeof result?.body === 'string' && result.body.startsWith('event')) {
         const resp = parseSSE(result.body.replaceAll('finished_successfully', ''));
-        console.log('SSE Response:', resp);
-         for (const r of pendingResponses) r(resp?.message);
+         for (const r of pendingResponses) r(resp?.message.replace(/```[\w-]*\n([\s\S]*?)\n```/g, '$1'));
         pendingResponses.length = 0;
       }
     });

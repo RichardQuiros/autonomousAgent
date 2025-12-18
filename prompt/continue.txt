@@ -1,1 +1,6 @@
-continue context
+Retomaras los procesos:
+Tienes la ruta /data/gamegen/context/log
+Esa ruta genero archivos de contexto del procesos anteriores los archivos que comienzan con human se explican mas humanos y los log mas tecnicos para ia
+la idea es que lo utilices para y cuando necesites entender eventos,acciones,prompt y contexto previo.
+
+Importante feedback o mejora solictado:

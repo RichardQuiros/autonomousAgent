@@ -2,23 +2,86 @@ services:
   n8n:
     build:
       context: .
-      dockerfile: Dockerfile
-    image: my-n8n-python:1.116.2
+      pull: true
+      dockerfile_inline: |
+        # n8n oficial desde Docker Hub (tag latest). En docs indican que el default usa Alpine.
+        FROM n8nio/n8n:latest
+
+        # Donante: Python "último" (3.13) sobre Alpine (musl), compatible con la base Alpine de n8n
+        FROM python:3.13-alpine AS py
+
+        # Runtime final: n8n oficial
+        FROM n8nio/n8n:latest
+
+        USER root
+
+        # Necesario para tu caso: bash para Execute Command, y certs para HTTPS
+        RUN apk add --no-cache bash ca-certificates \
+          && update-ca-certificates
+
+        # Copiamos Python 3.13 desde la imagen oficial de Python (sin tocar node/n8n)
+        COPY --from=py /usr/local/bin/python3.13 /usr/local/bin/
+        COPY --from=py /usr/local/bin/python3 /usr/local/bin/
+        COPY --from=py /usr/local/bin/pip3.13 /usr/local/bin/
+        COPY --from=py /usr/local/bin/pip3 /usr/local/bin/
+
+        COPY --from=py /usr/local/lib/python3.13 /usr/local/lib/python3.13
+        COPY --from=py /usr/local/lib/libpython3.13.so* /usr/local/lib/
+
+        # Aliases convenientes
+        RUN ln -sf /usr/local/bin/python3 /usr/local/bin/python \
+         && python3 --version \
+         && pip3 --version
+
+         # 🔑 INSTALAR httpx (y sus dependencias)
+        RUN pip3 install --no-cache-dir httpx
+
+        USER node
+
+    image: n8n-python:local
     container_name: n8n
+
+    ports:
+      - "5678:5678"
+
     environment:
       TZ: America/Bogota
       GENERIC_TIMEZONE: America/Bogota
-      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
       SOCKET_HOST: host.docker.internal
       SOCKET_PORT: "7345"
-    ports:
-      - "5678:5678"
+      OLLAMA_HOST: http://host.docker.internal:11434
+      NODES_EXCLUDE: "[]"
+      # Clave para httpx:
+      NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
+      no_proxy: "localhost,127.0.0.1,host.docker.internal"
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      all_proxy: ""
+
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    dns_opt:
+      - ndots:1
+    
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     volumes:
       - n8n_data:/home/node/.n8n
-      - "C:\\Users\\pqric\\Documents\\extensions\\tooltBot\\python:/home/node/python"
-      - "C:\\Users\\pqric\\Documents\\projects:/home/node/projects"
-      - "C:\\Users\\pqric\\Documents\\n8n\\context:/data/gamegen/context"
+      - ../python:/home/node/python
+      - ./projects:/home/node/projects
+      - ./context:/data/gamegen/context
+      - ../prompt:/prompt
+
     restart: unless-stopped
 
 volumes:
   n8n_data: {}
+
+# Cómo levantar todo (único comando)
+# docker compose up -d --build

@@ -46,5 +46,17 @@ Antes de cada respuesta:
 3. ¿Hubo errores previos que deba corregir?
 4. ¿Estoy generando solo comandos ejecutables?
 
+Respuesta:
+recibiras respuesta de lo anterior de esta manera:
+{"exitCode":0,"stderr":"","stdout":""}
+donde los valores pueden cambiar dependiendo si se ejecuto correctamente o si la consola imprime algo lo veras en stdout.
+con esto podras saber que hacer hasta que termines completamente lo solcitado.
+
+OBLIGATORIO esperar a que responda con exitCode 0 y que stderr y stdout no contenga mensaje de error almenos 1 vez:
+esto quiere decir que por ningun motivo puedes enviar FLOW_FINISH en tu primer respuesta se debe a que se quiere que validaes todo y nunca des por echo que funciona hasta probarlo.
+
+Se profesional, haz validaciones de que funcione lo que haces importante.
+
+Regla no detengas la terminal por timepo indeterminado por que rompe el flujo.
+
 META_ACTUAL:
-calculadora en python

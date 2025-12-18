@@ -3,6 +3,8 @@ import sys
 import json
 import socket
 import os
+from pathlib import Path
+from datetime import datetime
 
 HOST = os.getenv("SOCKET_HOST", "localhost")
 PORT = int(os.getenv("SOCKET_PORT", "7345"))
@@ -88,6 +90,20 @@ def main():
 
     resp = b"".join(chunks)
     decoded = resp.decode("utf-8")
+
+    # Directorio destino (relativo al script)
+    output_dir = Path(__file__).parent / ".." / "docker" / "context" / "queque"
+    output_dir = output_dir.resolve()
+
+    # Crear directorios si no existen
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"ia_response_{timestamp}.txt"
+    filepath = os.path.join(output_dir, filename)
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(decoded)
 
     if write_to_file:
         with open("response.txt", "w", encoding="utf-8") as f:

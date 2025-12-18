@@ -1,0 +1,13 @@
+AI will use this to retrieve context and optimize it for them.
+
+Extract factual information from the following logs.
+
+Rules:
+- Do not infer or guess information.
+- JSON format
+- Preserve original terminology.
+- Maintain chronological accuracy.
+- deterministic technical.
+
+Logs:
+{{RAW_LOG_TEXT}}

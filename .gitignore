@@ -11,7 +11,8 @@ yarn-error.log*
 # Directorios a ignorar
 /log
 /logs
-/project
+**/projects/
+**/context/
 /node_modules
 /dist
 /coverage

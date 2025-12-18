@@ -1,6 +1,6 @@
 import asyncio
-import json
 import time
+import re
 from pathlib import Path
 import httpx
 
@@ -24,6 +24,38 @@ MODEL_MACHINE = "qwen2.5:14b"
 POLL_SECONDS = 2.0  # <-- cada cuánto revisa nuevos archivos
 
 # -----------------------------
+# RESERVED WORDS STRIPPER
+# -----------------------------
+# 1) Convierte flow_XXX -> XXX (mantiene la parte útil)
+FLOW_UNDERSCORE_RE = re.compile(r"\bflow_([A-Za-z0-9_]+)\b", re.IGNORECASE)
+
+# 2) Si queda algún token raro tipo flowStep / FLOWABC (sin underscore) lo elimina completo
+FLOW_TOKEN_RE = re.compile(r"\bflow[A-Za-z0-9_]*\b", re.IGNORECASE)
+
+EMPTY_PARENS_RE = re.compile(r"\(\s*\)")  # elimina paréntesis vacíos resultantes
+
+def strip_flow_reserved(text: str) -> str:
+    if not text:
+        return text
+
+    # Primero: flow_XXX -> XXX
+    text = FLOW_UNDERSCORE_RE.sub(r"\1", text)
+
+    # Luego: elimina cualquier flowToken restante (sin underscore, etc.)
+    text = FLOW_TOKEN_RE.sub("", text)
+
+    # limpia paréntesis vacíos
+    text = EMPTY_PARENS_RE.sub("", text)
+
+    # colapsa espacios múltiples
+    text = re.sub(r"[ \t]{2,}", " ", text)
+
+    # limpia espacios antes de puntuación simple
+    text = re.sub(r"\s+([,.;:!?])", r"\1", text)
+
+    return text.strip()
+
+# -----------------------------
 # HELPERS
 # -----------------------------
 def safe_mkdirs():
@@ -38,9 +70,6 @@ def read_text(path: Path) -> str:
 def write_text(path: Path, content: str):
     path.write_text(content, encoding="utf-8")
 
-def write_json(path: Path, data: dict):
-    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-
 def load_prompts() -> tuple[str, str]:
     human_tpl = read_text(HUMAN_PROMPT_FILE)
     machine_tpl = read_text(MACHINE_PROMPT_FILE)
@@ -52,17 +81,6 @@ def render_prompt(template: str, raw_logs: str) -> str:
 def list_txt_files():
     # Solo .txt (ignora .processing)
     return sorted([p for p in QUEUE_DIR.glob("*.txt") if p.is_file()])
-
-def parse_strict_json(text: str) -> dict:
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        # rescate simple
-        s = text.find("{")
-        e = text.rfind("}")
-        if s != -1 and e != -1 and e > s:
-            return json.loads(text[s:e+1])
-        raise
 
 async def ollama_generate(client: httpx.AsyncClient, model: str, prompt: str) -> str:
     payload = {
@@ -81,7 +99,6 @@ async def process_file(file_path: Path, human_tpl: str, machine_tpl: str):
     try:
         file_path.rename(processing_path)
     except Exception:
-        # Si no se puede renombrar, probablemente aún lo están escribiendo o ya lo tomó otro proceso
         return
 
     raw_logs = read_text(processing_path)
@@ -94,21 +111,23 @@ async def process_file(file_path: Path, human_tpl: str, machine_tpl: str):
         t2 = asyncio.create_task(ollama_generate(client, MODEL_MACHINE, machine_prompt))
         human_text, machine_text = await asyncio.gather(t1, t2)
 
-    machine_json = parse_strict_json(machine_text)
+    # ---- LIMPIEZA DE FLOW_* ANTES DE GUARDAR (AMBOS SALEN TXT) ----
+    human_text = strip_flow_reserved(human_text)
+    machine_text = strip_flow_reserved(machine_text)
 
-    original_name = file_path.name  # nombre original del .txt
+    original_name = file_path.name
     human_filename = f"human_{original_name}"
-    machine_filename = f"log_{original_name}".replace(".txt", ".json")
+    machine_filename = f"log_{original_name}"
 
-    # Guardado según tu regla:
-    # humano: principal/log y principal/message
+    # humano: log y message
     write_text(OUT_LOG_DIR / human_filename, human_text)
     write_text(OUT_MESSAGE_DIR / human_filename, human_text)
 
-    # máquina: principal/log
-    write_json(OUT_LOG_DIR / machine_filename, machine_json)
+    # máquina: ahora también como TXT (NO JSON)
+    write_text(OUT_LOG_DIR / machine_filename, machine_text)
+    # si también quieres machine en message, descomenta:
+    # write_text(OUT_MESSAGE_DIR / machine_filename, machine_text)
 
-    # borrar procesado
     processing_path.unlink(missing_ok=True)
 
 async def main():
@@ -122,7 +141,6 @@ async def main():
     print("[Watcher] Running. Stop with CTRL+C.\n")
 
     while True:
-        # Recarga prompts en cada ciclo (así puedes editarlos sin reiniciar)
         try:
             human_tpl, machine_tpl = load_prompts()
         except FileNotFoundError:
@@ -138,15 +156,6 @@ async def main():
                 try:
                     await process_file(f, human_tpl, machine_tpl)
                     print(f"[OK] Processed: {f.name}")
-                except json.JSONDecodeError:
-                    # No borra input si JSON inválido; lo devuelve para retry
-                    proc = f.with_suffix(f.suffix + ".processing")
-                    if proc.exists():
-                        try:
-                            proc.rename(f)
-                        except Exception:
-                            pass
-                    print(f"[WARN] Invalid JSON, will retry later: {f.name}")
                 except Exception as e:
                     proc = f.with_suffix(f.suffix + ".processing")
                     if proc.exists():
