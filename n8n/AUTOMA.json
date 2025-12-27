@@ -3,65 +3,32 @@
   "nodes": [
     {
       "parameters": {
-        "executeOnce": false,
-        "command": "={{ $json.stdout }}"
-      },
-      "name": "terminal",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        352,
-        -32
-      ],
-      "id": "574c88c3-993f-43f4-8ac4-4f8798ef9c9b",
-      "alwaysOutputData": false,
-      "executeOnce": false,
-      "retryOnFail": false,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "command": "=CONTEXT_FILE=\"/data/gamegen/context\"\nDIR=\"/data/gamegen/context/queque\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S').txt\"\n\n# Escribir directamente al archivo\ncat <<EOF > \"$DIR/$FILENAME\"\n$(cat \"$CONTEXT_FILE/prompt/context.txt\")\n{{ JSON.stringify($json) }}\nEOF\n\nDIR_RESUME=\"/data/gamegen/context/resume/human\"\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone\n\n\n\n"
+        "command": "=CONTEXT_FILE=\"/data/gamegen/context\"\nDIR=\"/data/gamegen/context/queque\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S')-$RANDOM.txt\"\n\n# Escribir directamente al archivo\ncat <<'EOF' > \"$DIR/$FILENAME\"\nINTRUCTION\n{{ JSON.parse($('ia').item.json.stdout).res.body }}\n\nRESULT\n{{ JSON.stringify($json) }}\nEOF\n\nDIR_RESUME=\"/data/gamegen/context/message\"\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\necho \"iteration {{ $runIndex }}\"\necho \"\"\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone\n\n\n\n"
       },
       "name": "quequeContext",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        688,
-        -32
+        1120,
+        160
       ],
-      "id": "529e6e39-68c7-423a-9e13-f841cae84d47"
-    },
-    {
-      "parameters": {
-        "content": "# Context response\n### se encarga de responde de una forma Humana ",
-        "height": 288,
-        "width": 2448,
-        "color": 5
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1200,
-        288
-      ],
-      "typeVersion": 1,
-      "id": "63960a44-834b-428c-9606-05edaa9c6b26",
-      "name": "Sticky Note"
+      "id": "f63c0f3e-0144-4e4b-922e-819eb66a1db1",
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "content": "# Motor de IA\n### Se encarga de mantener vivo las consultas para la IA",
         "height": 368,
-        "width": 2448,
+        "width": 3040,
         "color": 6
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1200,
-        -80
+        -1232,
+        128
       ],
       "typeVersion": 1,
-      "id": "d20513d4-ed57-4439-84b4-3394d4d8ae51",
+      "id": "3ef2bdd0-b197-4144-afab-ddff8c511264",
       "name": "Sticky Note1"
     },
     {
@@ -70,11 +37,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1536,
-        -64
+        -1568,
+        144
       ],
       "typeVersion": 1,
-      "id": "fa4cf129-65dc-44e8-8ebe-499590fda191",
+      "id": "c1f600a6-0687-4a3f-97e7-2ac808f24883",
       "name": "Sticky Note2"
     },
     {
@@ -106,54 +73,26 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -320,
-        -16
+        112,
+        176
       ],
-      "id": "26f1d433-3416-47b5-86a5-048e8b79f4b8",
+      "id": "3e8e9ddf-2c49-443c-9e32-e9b9398a3591",
       "name": "If1"
     },
     {
       "parameters": {
-        "command": "=#!/bin/bash\n#set var\nsed -i '/export SESSION_ID=/d' ~/.bashrc\necho \"export SESSION_ID={{$('chat').item.json.sessionId}}\" >> ~/.bashrc\nsource ~/.bashrc\n\n# Lee los argumentos de n8n:\nPREV_NODE=\"{{ $prevNode.name }}\"\n\nif [ \"$PREV_NODE\" = \"chat\" ]; then\n    INPUT_MESSAGE='{{ $json?.chatInput }}'\nelse\n    INPUT_MESSAGE='{{(()=>{\n    let data = $('terminal')\n    if(!$json?.chatInput){\n      const message = JSON.stringify(data.item.json) \n      return message;\n    }\n    return '';\n    })()}}'\nfi\n\n# echo \"$PREV_NODE\"\n# echo \"$INPUT_MESSAGE\"\n\nCONTEXT_FILE=\"/data/gamegen/context\"       # Ruta del archivo de contexto estático\n\n# 1. Variables y Rutas\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\nSHOULD_CONTINUE=\"true\"  # Por defecto, continuar\n\n# Creamos la carpeta si no existe\nmkdir -p \"$(dirname \"$PROMPT_FILE_PATH\")\"\n\n# 2. Detección de Palabra Clave y Asignación de Modo (Limpiar y Guardar)\n\n# Convertimos el mensaje a mayúsculas para la detección (usaremos grep -q para IF)\nUPPER_MESSAGE=$(echo \"$INPUT_MESSAGE\" | tr '[:lower:]' '[:upper:]')\nMODE=\"DEFAULT\"\n\n# Prioridad 1: FLOW_FINISH (Máxima prioridad)\nif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_FINISH'; then\n    MODE=\"FINISH\"\n    CLEAN_MESSAGE=\"\"\n    SHOULD_CONTINUE=\"false\"\n    \n    # Prioridad 2: FLOW_INITIAL\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_INITIAL'; then\n    MODE=\"INITIAL\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_INITIAL//i' -e 's/^[[:space:]]*//')\n    \n    # Prioridad 3: FLOW_CONTINUE\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_CONTINUE'; then\n    MODE=\"CONTINUE\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_CONTINUE//i' -e 's/^[[:space:]]*//')\n    \nelse\n    MODE=\"DEFAULT\"\n    CLEAN_MESSAGE=\"$INPUT_MESSAGE\"\nfi\n\n# 3. Lógica del Switch y Construcción del Prompt con Here Document\n\n# Usamos una variable para construir el contenido final del prompt.txt\nFINAL_PROMPT_CONTENT=\"\"\n\ncase \"$MODE\" in\n    \"INITIAL\")\n        # Concatena el archivo de contexto estático y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_INITIAL\n$(cat $CONTEXT_FILE/prompt/initial.txt)\n\n$CLEAN_MESSAGE\nEOF_INITIAL\n    ;;\n    \n    \"CONTINUE\")\n        # Concatena el archivo de contexto estático, el mensaje limpio y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_CONTINUE\n$(cat \"$CONTEXT_FILE/prompt/initial.txt\")\n\n$(cat \"$CONTEXT_FILE/prompt/continue.txt\")\n\n$CLEAN_MESSAGE\nEOF_CONTINUE\n    ;;\n    \n    \"FINISH\")\n        # El comando FINISH no necesita un prompt complejo, pero lo crea para consistencia.\n        FINAL_PROMPT_CONTENT=\"[FIN DE FLUJO]. No se requiere respuesta. shouldContinue=false\"\n    ;;\n    \n    \"DEFAULT\")\n        # Concatena el mensaje original y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_DEFAULT\n$CLEAN_MESSAGE\nEOF_DEFAULT\n    ;;\nesac\n\n# 4. Guardar el Prompt Final en prompt.txt\n# Usamos 'echo -e' para asegurar que los saltos de línea se interpreten correctamente.\necho \"$FINAL_PROMPT_CONTENT\" > \"$PROMPT_FILE_PATH\"\n\n# 5. Imprimir la SALIDA JSON MÍNIMA (SOLO EL BOOLEANO)\n# Esto es lo único que n8n recibirá para el nodo IF.\necho \"$SHOULD_CONTINUE\"\n# cat \"$PROMPT_FILE_PATH\""
+        "command": "=#!/bin/bash\n#set var\nsed -i '/export SESSION_ID=/d' ~/.bashrc\necho \"export SESSION_ID={{$('chat').item.json.sessionId}}\" >> ~/.bashrc\nsource ~/.bashrc\n\n# Lee los argumentos de n8n:\nPREV_NODE=\"{{ $prevNode.name }}\"\n\nif [ \"$PREV_NODE\" = \"initWatcher\" ]; then\n    INPUT_MESSAGE='{{ $('chat').item.json.chatInput }}'\nelse\n    INPUT_MESSAGE=$(cat <<'EOF'\n      {{(()=>{\n        try {return JSON.stringify($('terminal').item.json).replace(\"'\", \"\")}\n        catch {return \"\"}\n      })()}}\nEOF\n)\nfi\n\n# echo \"$PREV_NODE\"\n# echo \"$INPUT_MESSAGE\"\n\n# 1. Variables y Rutas\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\nSHOULD_CONTINUE=\"true\"  # Por defecto, continuar\n\n# Creamos la carpeta si no existe\nmkdir -p \"$(dirname \"$PROMPT_FILE_PATH\")\"\n\n# 2. Detección de Palabra Clave y Asignación de Modo (Limpiar y Guardar)\n\n# Convertimos el mensaje a mayúsculas para la detección (usaremos grep -q para IF)\nUPPER_MESSAGE=$(echo \"$INPUT_MESSAGE\" | tr '[:lower:]' '[:upper:]')\nMODE=\"DEFAULT\"\n\n# Prioridad 1: FLOW_FINISH (Máxima prioridad)\nif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_FINISH'; then\n    MODE=\"FINISH\"\n    CLEAN_MESSAGE=\"\"\n    SHOULD_CONTINUE=\"false\"\n    \n    # Prioridad 2: FLOW_INITIAL\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_INITIAL'; then\n    MODE=\"INITIAL\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_INITIAL//i' -e 's/^[[:space:]]*//')\n    \n    # Prioridad 3: FLOW_CONTINUE\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_CONTINUE'; then\n    MODE=\"CONTINUE\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_CONTINUE//i' -e 's/^[[:space:]]*//')\n    \nelse\n    MODE=\"DEFAULT\"\n    CLEAN_MESSAGE=\"$INPUT_MESSAGE\"\nfi\n\n# 3. Lógica del Switch y Construcción del Prompt con Here Document\n\n# Usamos una variable para construir el contenido final del prompt.txt\nFINAL_PROMPT_CONTENT=\"\"\n\ncase \"$MODE\" in\n    \"INITIAL\")\n        # Concatena el archivo de contexto estático y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_INITIAL\n$(cat /prompt/initial.txt)\n\n$CLEAN_MESSAGE\nEOF_INITIAL\n    ;;\n    \n    \"CONTINUE\")\n        # Concatena el archivo de contexto estático, el mensaje limpio y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_CONTINUE\n$(cat \"/prompt/initial.txt\")\n\n$(cat \"/prompt/continue.txt\")\n\n$CLEAN_MESSAGE\nEOF_CONTINUE\n    ;;\n    \n    \"FINISH\")\n        # El comando FINISH no necesita un prompt complejo, pero lo crea para consistencia.\n        FINAL_PROMPT_CONTENT=\"[FIN DE FLUJO]. No se requiere respuesta. shouldContinue=false\"\n    ;;\n    \n    \"DEFAULT\")\n        # Concatena el mensaje original y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_DEFAULT\n$CLEAN_MESSAGE\nEOF_DEFAULT\n    ;;\nesac\n\n# 4. Guardar el Prompt Final en prompt.txt\n# Usamos 'echo -e' para asegurar que los saltos de línea se interpreten correctamente.\necho \"$FINAL_PROMPT_CONTENT\" > \"$PROMPT_FILE_PATH\"\n\n# 5. Imprimir la SALIDA JSON MÍNIMA (SOLO EL BOOLEANO)\n# Esto es lo único que n8n recibirá para el nodo IF.\necho \"$SHOULD_CONTINUE\"\n# cat \"$PROMPT_FILE_PATH\""
       },
       "name": "terminal1",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -560,
-        -16
+        -128,
+        176
       ],
-      "id": "8479976b-0b0d-4aa5-8428-8a4582097bc8",
+      "id": "4edc3406-35af-415e-9e09-2719d331f9b5",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "command": "=sleep 2;\nif [ \"{{$runIndex}}\" = \"5\" ]; then\n  echo \"echo FLOW_FINISH\"\nelse\n  echo \"echo hola_mundo\"\nfi"
-      },
-      "name": "ia1",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        16,
-        -32
-      ],
-      "id": "cc68cdd0-5934-4ec3-9e9d-58a9c0a8625e",
-      "alwaysOutputData": false,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "command": "=#!/usr/bin/env bash\nset -eu  # Salir si hay errores y si se usan variables no definidas\n\nDIR=\"/data/gamegen/context/queque\"\nPY_DIR=\"/home/node/python\"\nOUT_DIR=\"/data/gamegen/context/resume\"\n\nBASHRC=\"$HOME/.bashrc\"\n\n# Aseguramos que exista el archivo\ntouch \"$BASHRC\"\n\n# --- Función para setear la bandera IA_RESUME en ~/.bashrc ---\nset_ia_resume_flag() {\n  local value=\"$1\"  # \"true\" o \"false\"\n  sed -i '/export IA_RESUME=/d' \"$BASHRC\"\n  echo \"export IA_RESUME=$value\" >> \"$BASHRC\"\n  export IA_RESUME=\"$value\"\n}\n\ncd \"$PY_DIR\" || exit 1\n\nexport SOCKET_HOST=\"host.docker.internal\"\nexport SOCKET_PORT=\"7345\"\n\n# Al iniciar el proceso: estamos activos\nset_ia_resume_flag true\n\nmkdir -p \"$OUT_DIR\"\n\nwhile :; do\n  # FIFO — archivos más viejos primero\n  FILES=$(ls -1tr \"$DIR\" 2>/dev/null || true)\n\n  # Si no hay archivos, comprobamos si aparecen nuevos tras una espera\n  if [ -z \"$FILES\" ]; then\n    # Espera antes de decidir que realmente está todo vacío\n    sleep 5\n\n    FILES=$(ls -1tr \"$DIR\" 2>/dev/null || true)\n\n    # Si sigue sin haber archivos, marcamos IA_RESUME=false y salimos\n    if [ -z \"$FILES\" ]; then\n      set_ia_resume_flag false\n      break\n    fi\n    # Si hay archivos nuevos, seguimos y los procesamos debajo\n  fi\n\n  for NAME in $FILES; do\n    FILE=\"$DIR/$NAME\"\n\n    # Solo procesar si es archivo\n    [ -f \"$FILE\" ] || continue\n\n    HUMAN_FILE=\"$OUT_DIR/human/${NAME}.txt\"\n    IA_FILE=\"$OUT_DIR/ia/${NAME}.txt\"\n\n    # Primera ejecución → human_$filename.txt\n    if ! python3 cli.py send \"$FILE\" > \"$HUMAN_FILE\" 2>/dev/null; then\n      # Si falla, no borramos el archivo de la cola ni generamos ia_*\n      continue\n    fi\n\n    # Segunda ejecución → ia_$filename.txt\n    if ! python3 cli.py send \"$FILE\" > \"$IA_FILE\" 2>/dev/null; then\n      # Si falla la segunda, dejamos el archivo original en la cola\n      # (si quieres borrar el HUMAN para consistencia, puedes añadir: rm -f \"$HUMAN_FILE\")\n      continue\n    fi\n\n    # Si ambas ejecuciones fueron bien, borramos el archivo de la cola\n    rm -f \"$FILE\"\n  done\ndone\n"
-      },
-      "name": "iaContext",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        -192,
-        352
-      ],
-      "id": "0b18f1ce-f624-467d-a347-e7522ba82e67"
     },
     {
       "parameters": {
@@ -165,73 +104,12 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.3,
       "position": [
-        -784,
-        -16
+        -608,
+        176
       ],
-      "id": "47995a07-a4e3-47ec-b9ea-b7cfbcd3ae0d",
+      "id": "680e6b9d-551a-459e-bc13-e74a01c1442c",
       "name": "chat",
       "webhookId": "13e346db-a58c-4761-b613-3abd74cdf050"
-    },
-    {
-      "parameters": {
-        "triggerOn": "folder",
-        "path": "/data/gamegen/context/queque/",
-        "events": [
-          "add"
-        ],
-        "options": {}
-      },
-      "type": "n8n-nodes-base.localFileTrigger",
-      "typeVersion": 1,
-      "position": [
-        -784,
-        352
-      ],
-      "id": "b0b04c68-774b-490f-9c63-3558cca89b83",
-      "name": "Local File Trigger"
-    },
-    {
-      "parameters": {
-        "command": "#!/bin/bash\nsource ~/.bashrc\necho $SESSION_ID"
-      },
-      "name": "sessionID",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        -480,
-        352
-      ],
-      "id": "ded652f7-6694-4dd3-9143-be0803acf700",
-      "alwaysOutputData": false,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "message": "={{ $runIndex }} hola",
-        "waitUserReply": false,
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chat",
-      "typeVersion": 1,
-      "position": [
-        992,
-        -32
-      ],
-      "id": "c063c1a9-b3d9-4219-a6e3-96538280be22",
-      "name": "Respond to Chat3"
-    },
-    {
-      "parameters": {
-        "command": "=#!/bin/bash\n\nQUEUE_DIR=\"/data/gamegen/context/queque\"\n\n# Esperar hasta que la carpeta esté vacía\nwhile true; do\n    # Cuenta los archivos dentro del directorio (0 = vacío)\n    if [ -d \"$QUEUE_DIR\" ]; then\n        count=$(ls -1 \"$QUEUE_DIR\" 2>/dev/null | wc -l)\n    else\n        # Si no existe, la creamos y la consideramos vacía\n        mkdir -p \"$QUEUE_DIR\"\n        count=0\n    fi\n\n    if [ \"$count\" -eq 0 ]; then\n        # La carpeta está vacía → continuar\n        break\n    fi\n\n    sleep 1\ndone\n\n\n# --- Lógica actual para consumir y borrar archivos ---\n\nDIR_RESUME=\"/data/gamegen/context/resume/human\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone"
-      },
-      "name": "iaContext1",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        16,
-        160
-      ],
-      "id": "39156d0b-bb00-4250-b030-4758bee26c18"
     },
     {
       "parameters": {
@@ -242,11 +120,42 @@
       "type": "@n8n/n8n-nodes-langchain.chat",
       "typeVersion": 1,
       "position": [
-        352,
+        1600,
         160
       ],
-      "id": "788185b4-a995-4252-a091-b4c551a98319",
-      "name": "Respond to Chat"
+      "id": "9d3acc79-c980-42c4-814f-7402bd69cf4a",
+      "name": "Respond to Chat3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=#!/bin/bash\n\nQUEUE_DIR=\"/data/gamegen/context/queque\"\n\n# Esperar hasta que la carpeta esté vacía\nwhile true; do\n    # Cuenta los archivos dentro del directorio (0 = vacío)\n    if [ -d \"$QUEUE_DIR\" ]; then\n        count=$(ls -1 \"$QUEUE_DIR\" 2>/dev/null | wc -l)\n    else\n        # Si no existe, la creamos y la consideramos vacía\n        mkdir -p \"$QUEUE_DIR\"\n        count=0\n    fi\n\n    if [ \"$count\" -eq 0 ]; then\n        # La carpeta está vacía → continuar\n        break\n    fi\n\n    sleep 1\ndone\n\n\n# --- Lógica actual para consumir y borrar archivos ---\n\nDIR_RESUME=\"/data/gamegen/context/message\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  echo \"resume:\"\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone"
+      },
+      "name": "iaContext1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        464,
+        352
+      ],
+      "id": "abd875c4-8ae5-4d0d-855d-3e929b4657b1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "message": "={{ $json.stdout }}",
+        "waitUserReply": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1,
+      "position": [
+        784,
+        352
+      ],
+      "id": "57b0fcff-2858-43cc-8b77-d8f59d6c696f",
+      "name": "Respond to Chat",
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -256,25 +165,86 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        32,
-        -208
+        464,
+        160
       ],
-      "id": "7b99a356-555a-47a5-b4b0-50374b490ccd",
+      "id": "bcf6608f-0712-43c8-855c-f00281193e7d",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "command": "={{ JSON.parse($json.stdout).res.body }}"
+        "command": "=#!/usr/bin/env bash\n\nDIR=\"/data/gamegen/context/queque\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S').txt\"\n\n# Escribir directamente al archivo\ncat <<EOF > \"$DIR/$FILENAME\"\nFirst process instructions from flow automa generator:\n\"\"\"\n{{ $json.chatInput }}\n\"\"\"\nEOF\n\n\n# Init queue\n\nSCRIPT=\"/home/node/python/queue_watcher.py\"\n\nif pgrep -f \"python3 .*${SCRIPT}\" > /dev/null; then\n  echo \"queue_watcher.py ya está corriendo\"\n  exit 0\nfi\n\necho \"Iniciando queue_watcher.py en segundo plano...\"\nnohup python3 \"$SCRIPT\" > /home/node/python/queue_watcher.log 2>&1 &\n"
       },
-      "name": "terminal2",
+      "name": "initWatcher",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        336,
-        -208
+        -384,
+        176
       ],
-      "id": "a6b24dac-7854-4c6d-b2f1-3cc9ad80ec4a",
+      "id": "59cfe97c-595c-41ff-99f7-e7a5de84bfed",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=#!/usr/bin/env bash\n\nSCRIPT=\"/home/node/python/queue_watcher.py\"\n\nPIDS=$(pgrep -f \"python3 .*${SCRIPT}\")\n\nif [[ -z \"$PIDS\" ]]; then\n  echo \"queue_watcher.py no está corriendo\"\n  exit 0\nfi\n\necho \"Matando queue_watcher.py\"\necho \"PIDs: $PIDS\"\n\nkill $PIDS\nsleep 2\n\n# Fuerza si alguno sigue vivo\nkill -9 $PIDS 2>/dev/null || true\n\necho \"queue_watcher.py detenido\"\n"
+      },
+      "name": "killWatcher",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        352
+      ],
+      "id": "2be571e0-1511-446c-8a67-80025a86572c",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=#!/usr/bin/env bash\n\nSCRIPT=\"/home/node/python/queue_watcher.py\"\n\nPIDS=$(pgrep -f \"python3 .*${SCRIPT}\")\n\nif [[ -z \"$PIDS\" ]]; then\n  echo \"queue_watcher.py no está corriendo\"\n  exit 0\nfi\n\necho \"Matando queue_watcher.py\"\necho \"PIDs: $PIDS\"\n\nkill $PIDS\nsleep 2\n\n# Fuerza si alguno sigue vivo\nkill -9 $PIDS 2>/dev/null || true\n\necho \"queue_watcher.py detenido\"\n"
+      },
+      "name": "killWatcher1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        464,
+        544
+      ],
+      "id": "eb976ec6-8dad-4790-9cc4-7c7f770c05cf",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=sleep 2;\nif [ \"{{$runIndex}}\" = \"15\" ]; then\n  echo \"echo FLOW_FINISH\"\nelse\n  echo \"echo hola_mundo\"\nfi"
+      },
+      "name": "ia1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -112
+      ],
+      "id": "e938ae9d-1719-493d-8888-a0102734994d",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "executeOnce": false,
+        "command": "={{ $json.stdout }}"
+      },
+      "name": "terminalTest",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -80
+      ],
+      "id": "29e00a5c-e051-4ba3-9635-cc79b5c26476",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false,
@@ -282,42 +252,24 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "messages": {
-          "values": [
-            {}
-          ]
-        },
-        "options": {}
+        "command": "={{(()=>{\n    const body = JSON.parse($json.stdout).res.body;\n\n    if (body === \"FLOW_FINISH\") {\n      return 'echo \"FLOW_FINISH\"'\n    } else {\n      return body\n    }\n})()}}"
       },
-      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "name": "terminal",
+      "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        368,
-        496
+        784,
+        160
       ],
-      "id": "63e5baec-89c1-4bbd-841b-a61848b3cf82",
-      "name": "Message a model"
+      "id": "095cf57b-2db4-4302-b356-c27c3133c94f",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
   "connections": {
-    "terminal": {
-      "main": [
-        [
-          {
-            "node": "quequeContext",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
     "quequeContext": {
       "main": [
         [
@@ -344,7 +296,7 @@
       "main": [
         [
           {
-            "node": "ia1",
+            "node": "ia",
             "type": "main",
             "index": 0
           }
@@ -358,49 +310,11 @@
         ]
       ]
     },
-    "iaContext": {
-      "main": [
-        []
-      ]
-    },
-    "ia1": {
-      "main": [
-        [
-          {
-            "node": "terminal",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "chat": {
       "main": [
         [
           {
-            "node": "terminal1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Local File Trigger": {
-      "main": [
-        [
-          {
-            "node": "sessionID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "sessionID": {
-      "main": [
-        [
-          {
-            "node": "iaContext",
+            "node": "initWatcher",
             "type": "main",
             "index": 0
           }
@@ -428,17 +342,71 @@
           }
         ]
       ]
+    },
+    "initWatcher": {
+      "main": [
+        [
+          {
+            "node": "terminal1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Chat": {
+      "main": [
+        [
+          {
+            "node": "killWatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ia1": {
+      "main": [
+        []
+      ]
+    },
+    "ia": {
+      "main": [
+        [
+          {
+            "node": "terminal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "terminalTest": {
+      "main": [
+        []
+      ]
+    },
+    "terminal": {
+      "main": [
+        [
+          {
+            "node": "quequeContext",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "8b036391-1849-4100-b846-9985ecc2014f",
+  "versionId": "01ff93f5-bc53-43b9-a77c-cb66d2e8bd81",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "3d0f879ed0f8b261fe23b00293e92a4acfe533deab9b92a17f4db73065e8d64c"
+    "instanceId": "61e1d8d77c41f5ba55f79c5e8b1b58bc806e2de256ae8078f33364e0c1ab6e47"
   },
-  "id": "ZG6SXJmzmz3K8I5D",
+  "id": "y7oJ93PDFYZ7vdiz",
   "tags": []
 }

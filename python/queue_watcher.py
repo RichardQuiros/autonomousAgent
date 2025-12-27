@@ -21,27 +21,39 @@ OLLAMA_URL = "http://host.docker.internal:11434/api/generate"
 MODEL_HUMAN = "llama3.1:8b"
 MODEL_MACHINE = "qwen2.5:14b"
 
-POLL_SECONDS = 2.0  # <-- cada cuánto revisa nuevos archivos
+POLL_SECONDS = 2.0  # cada cuánto revisa nuevos archivos
 
 # -----------------------------
 # RESERVED WORDS STRIPPER
 # -----------------------------
-# 1) Convierte flow_XXX -> XXX (mantiene la parte útil)
+# 1) Convierte flow_XXX -> XXX
 FLOW_UNDERSCORE_RE = re.compile(r"\bflow_([A-Za-z0-9_]+)\b", re.IGNORECASE)
 
-# 2) Si queda algún token raro tipo flowStep / FLOWABC (sin underscore) lo elimina completo
+# 2) Elimina cualquier token tipo flowStep / FLOWABC (sin underscore)
 FLOW_TOKEN_RE = re.compile(r"\bflow[A-Za-z0-9_]*\b", re.IGNORECASE)
 
 EMPTY_PARENS_RE = re.compile(r"\(\s*\)")  # elimina paréntesis vacíos resultantes
 
-def strip_flow_reserved(text: str) -> str:
+# EOF -> E-O-F (referencial)
+EOF_RE = re.compile(r"\bEOF\b", re.IGNORECASE)
+
+def strip_reserved(text: str) -> str:
+    """
+    Limpia:
+    - EOF -> E-O-F
+    - flow_XXX -> XXX
+    - flowXXXX -> (elimina)
+    """
     if not text:
         return text
 
-    # Primero: flow_XXX -> XXX
+    # EOF -> E-O-F
+    text = EOF_RE.sub("E-O-F", text)
+
+    # flow_XXX -> XXX
     text = FLOW_UNDERSCORE_RE.sub(r"\1", text)
 
-    # Luego: elimina cualquier flowToken restante (sin underscore, etc.)
+    # elimina cualquier flowToken restante
     text = FLOW_TOKEN_RE.sub("", text)
 
     # limpia paréntesis vacíos
@@ -68,7 +80,8 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 def write_text(path: Path, content: str):
-    path.write_text(content, encoding="utf-8")
+    # SIEMPRE texto plano. Nunca formateo JSON, nunca pretty, nunca validación.
+    path.write_text(content if content is not None else "", encoding="utf-8", errors="replace")
 
 def load_prompts() -> tuple[str, str]:
     human_tpl = read_text(HUMAN_PROMPT_FILE)
@@ -82,17 +95,53 @@ def list_txt_files():
     # Solo .txt (ignora .processing)
     return sorted([p for p in QUEUE_DIR.glob("*.txt") if p.is_file()])
 
+# -----------------------------
+# OLLAMA (MÁS SEGURO ANTI-FALLOS)
+# -----------------------------
+def extract_response_field(obj) -> str:
+    """
+    Extrae obj["response"] si existe y es string.
+    Si no existe o no es string, devuelve "".
+    """
+    if isinstance(obj, dict):
+        resp = obj.get("response", "")
+        if isinstance(resp, str):
+            return resp
+    return ""
+
 async def ollama_generate(client: httpx.AsyncClient, model: str, prompt: str) -> str:
+    """
+    Estrategia anti-fallos:
+    1) Hace POST usando json=payload (request correcto y estándar).
+    2) Intenta parsear r.json() de forma segura.
+    3) Si falla el parseo o falta "response", NO rompe: regresa r.text.
+    4) Nunca usa regex para extraer (evita falsos positivos por contenido del modelo).
+    """
     payload = {
         "model": model,
         "prompt": prompt,
         "stream": False,
         "options": {"temperature": 0.2}
     }
+
     r = await client.post(OLLAMA_URL, json=payload, timeout=600)
     r.raise_for_status()
-    return r.json().get("response", "").strip()
 
+    # Intento 1: JSON real
+    try:
+        data = r.json()
+        resp = extract_response_field(data)
+        if isinstance(resp, str) and resp.strip():
+            return resp.strip()
+        # si viene JSON sin "response" o vacío, igual no falles
+        return (r.text or "").strip()
+    except Exception:
+        # Intento 2: texto crudo, sin parseo
+        return (r.text or "").strip()
+
+# -----------------------------
+# PROCESSING
+# -----------------------------
 async def process_file(file_path: Path, human_tpl: str, machine_tpl: str):
     # Claim atómico para que no se procese doble
     processing_path = file_path.with_suffix(file_path.suffix + ".processing")
@@ -106,14 +155,21 @@ async def process_file(file_path: Path, human_tpl: str, machine_tpl: str):
     human_prompt = render_prompt(human_tpl, raw_logs)
     machine_prompt = render_prompt(machine_tpl, raw_logs)
 
+    # Si falla Ollama por cualquier razón, preferimos NO botar el watcher completo.
+    # Devolvemos strings de fallback para poder guardar algo y continuar.
     async with httpx.AsyncClient() as client:
-        t1 = asyncio.create_task(ollama_generate(client, MODEL_HUMAN, human_prompt))
-        t2 = asyncio.create_task(ollama_generate(client, MODEL_MACHINE, machine_prompt))
-        human_text, machine_text = await asyncio.gather(t1, t2)
+        try:
+            t1 = asyncio.create_task(ollama_generate(client, MODEL_HUMAN, human_prompt))
+            t2 = asyncio.create_task(ollama_generate(client, MODEL_MACHINE, machine_prompt))
+            human_text, machine_text = await asyncio.gather(t1, t2)
+        except Exception as e:
+            # fallback duro: guarda el error como texto plano
+            human_text = f"[ERROR] OLLAMA_FAILED: {e}"
+            machine_text = f"[ERROR] OLLAMA_FAILED: {e}"
 
-    # ---- LIMPIEZA DE FLOW_* ANTES DE GUARDAR (AMBOS SALEN TXT) ----
-    human_text = strip_flow_reserved(human_text)
-    machine_text = strip_flow_reserved(machine_text)
+    # ---- LIMPIEZA ANTES DE GUARDAR (TODO TXT PLANO) ----
+    human_text = strip_reserved(human_text)
+    machine_text = strip_reserved(machine_text)
 
     original_name = file_path.name
     human_filename = f"human_{original_name}"
@@ -123,7 +179,7 @@ async def process_file(file_path: Path, human_tpl: str, machine_tpl: str):
     write_text(OUT_LOG_DIR / human_filename, human_text)
     write_text(OUT_MESSAGE_DIR / human_filename, human_text)
 
-    # máquina: ahora también como TXT (NO JSON)
+    # máquina: TXT plano
     write_text(OUT_LOG_DIR / machine_filename, machine_text)
     # si también quieres machine en message, descomenta:
     # write_text(OUT_MESSAGE_DIR / machine_filename, machine_text)
@@ -157,6 +213,7 @@ async def main():
                     await process_file(f, human_tpl, machine_tpl)
                     print(f"[OK] Processed: {f.name}")
                 except Exception as e:
+                    # rollback del .processing si existe
                     proc = f.with_suffix(f.suffix + ".processing")
                     if proc.exists():
                         try:

@@ -1,6 +1,6 @@
 You are a technical assistant.
 
-Read the following logs and explain what happened in clear, concise, human-readable.
+Read the following input and explain what happened in clear, concise, human-readable.
 
 Rules:
 - Explain events in chronological order.
@@ -9,5 +9,5 @@ Rules:
 - Do not speculate about causes unless explicitly stated.
 - Keep the explanation short and clear.
 
-Logs:
+Input:
 {{RAW_LOG_TEXT}}

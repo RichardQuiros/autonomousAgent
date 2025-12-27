@@ -1,6 +1,6 @@
 AI will use this to retrieve context and optimize it for them.
 
-Extract factual information from the following logs.
+Extract factual information from the following input.
 
 Rules:
 - Do not infer or guess information.
@@ -9,5 +9,5 @@ Rules:
 - Maintain chronological accuracy.
 - deterministic technical.
 
-Logs:
+Input:
 {{RAW_LOG_TEXT}}
