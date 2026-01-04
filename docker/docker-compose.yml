@@ -4,37 +4,41 @@ services:
       context: .
       pull: true
       dockerfile_inline: |
-        # n8n oficial desde Docker Hub (tag latest). En docs indican que el default usa Alpine.
-        FROM n8nio/n8n:latest
+        # Stage: preparar bash + certs + deps reales
+        FROM alpine:3.23 AS deps
+        RUN apk add --no-cache bash ca-certificates
 
-        # Donante: Python "último" (3.13) sobre Alpine (musl), compatible con la base Alpine de n8n
+        # Empaquetar bash y TODAS sus libs (detectadas con ldd) en /out
+        RUN set -eux; \
+            mkdir -p /out/bin /out/lib /out/etc/ssl/certs; \
+            cp -a /bin/bash /out/bin/; \
+            cp -a /etc/ssl/certs/ca-certificates.crt /out/etc/ssl/certs/; \
+            # copiar loader + libs que bash necesita (ldd)
+            ldd /bin/bash | awk '{print $1,$3}' | \
+              awk '$2 ~ /^\// {print $2} $1 ~ /^\// {print $1}' | \
+              sort -u | \
+              xargs -r -I{} cp -a {} /out/lib/ || true
+
         FROM python:3.13-alpine AS py
 
-        # Runtime final: n8n oficial
-        FROM n8nio/n8n:latest
-
+        FROM n8nio/n8n:2.2.0
         USER root
 
-        # Necesario para tu caso: bash para Execute Command, y certs para HTTPS
-        RUN apk add --no-cache bash ca-certificates \
-          && update-ca-certificates
+        # bash + libs + certs (sin apk en la imagen final)
+        COPY --from=deps /out/ /
 
-        # Copiamos Python 3.13 desde la imagen oficial de Python (sin tocar node/n8n)
+        # Python 3.13
         COPY --from=py /usr/local/bin/python3.13 /usr/local/bin/
         COPY --from=py /usr/local/bin/python3 /usr/local/bin/
         COPY --from=py /usr/local/bin/pip3.13 /usr/local/bin/
         COPY --from=py /usr/local/bin/pip3 /usr/local/bin/
-
         COPY --from=py /usr/local/lib/python3.13 /usr/local/lib/python3.13
         COPY --from=py /usr/local/lib/libpython3.13.so* /usr/local/lib/
 
-        # Aliases convenientes
         RUN ln -sf /usr/local/bin/python3 /usr/local/bin/python \
-         && python3 --version \
-         && pip3 --version
-
-         # 🔑 INSTALAR httpx (y sus dependencias)
-        RUN pip3 install --no-cache-dir httpx
+          && python3 --version \
+          && pip3 --version \
+          && pip3 install --no-cache-dir httpx
 
         USER node
 
@@ -77,6 +81,7 @@ services:
       - ./projects:/home/node/projects
       - ./context:/data/gamegen/context
       - ../prompt:/prompt
+      - ../../../bot/pocketBot:/data/pocket
 
     restart: unless-stopped
 

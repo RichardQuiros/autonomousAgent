@@ -6,6 +6,52 @@ Leer y enviar archivos de contexto (`human` o `log`) **por partes**, sin exceder
 
 ---
 
+## 📌 Uso rápido (resumen)
+
+**Descripción**
+CLI para **listar** archivos de contexto (`human*.txt`, `log*.txt`) y **leerlos por partes** usando un **cursor** hasta completar el contenido.
+
+---
+
+### 📂 Listar archivos (`files`)
+
+```bash
+# Listar todo
+python /home/node/python/context_cli.py files
+
+# Solo log
+python /home/node/python/context_cli.py files --type log
+
+# Filtrar por fecha
+python /home/node/python/context_cli.py files --type human --since 2025-01-01 --until 2025-01-02
+```
+
+---
+
+### 📖 Leer por partes (`get`)
+
+```bash
+# Primera lectura
+python /home/node/python/context_cli.py get --type log --max-chars 12000
+```
+
+Salida:
+
+```
+NEXT_CURSOR: <cursor>
+```
+
+```bash
+# Continuar
+python /home/node/python/context_cli.py get --type log --max-chars 12000 --cursor "<cursor>"
+```
+
+Repetir hasta:
+
+```
+FIN
+```
+
 ## Tipos de archivo
 
 * **human** → `human*.txt`

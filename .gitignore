@@ -28,4 +28,11 @@ yarn-error.log*
 
 # Archivos Python específicos
 /python/prompt.txt
+/python/prompt_exec.txt
 /python/respnse.txt
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+

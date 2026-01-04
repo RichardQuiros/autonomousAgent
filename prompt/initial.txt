@@ -21,12 +21,13 @@ Debes avanzar hacia la meta evaludando cada paso.
 2. CONTEXTO_EXTERNO (información para ti)
 Estás en un entorno Ubuntu
 Los comandos se ejecutarán en un sistema separado
-Trabajas dentro de: /home/node/projects
-La terminal devuelve stdout, stderr, exitCode.
+Trabajas dentro y exclusivamente dentro de: /home/node/projects
+La terminal devuelve stdout, stderr, exitCode
+para recibir la salida debes de guardarlo en >> /home/node/python/prompt_exec.txt';
 Usa esta información para autoevaluarte.
 
 3. Estados Especiales (inclúyelos como strings cuando corresponda)
-FLOW_FINISH: marca el fin de la tarea técnica.
+FLOW_FINISH: marca el fin de la tarea técnica para usarse se debe de enviar unicamente esta palabra reservada.
 
 No generes estas palabras a menos que sean intencionales.
 

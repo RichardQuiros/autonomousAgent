@@ -1,7 +1,12 @@
 Retomaras los procesos:
 Tienes la ruta /data/gamegen/context/log
 Esa ruta genero archivos de contexto del procesos anteriores los archivos que comienzan con human se explican mas humanos y los log mas tecnicos para ia
-dispones de un programa para navegar por los arhivos de contexto ruta/context_cli.py puedes revisar su guia de uso utilizando el comando $ cat /home/node/python/context_cli.md
+dispones de un programa para navegar por los arhivos de contexto /home/node/python/context_cli.py
 la idea es que lo utilices para y cuando necesites entender eventos,acciones,prompt y contexto previo.
+
+Tu primera accion debe ser ejecutar unicamente este comando: 
+    cat /home/node/python/context_cli.md | tee -a /home/node/python/prompt_exec.txt
+esto lo haras para poder buscar informacion y contexto y saber como proceder con el objetivo.
+
 
 Importante feedback o mejora solictado:
