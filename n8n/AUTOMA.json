@@ -3,16 +3,16 @@
   "nodes": [
     {
       "parameters": {
-        "command": "=CONTEXT_FILE=\"/data/gamegen/context\"\nDIR=\"/data/gamegen/context/queque\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S')-$RANDOM.txt\"\n\n# Escribir directamente al archivo\ncat <<'EOF' > \"$DIR/$FILENAME\"\nINTRUCTION\n{{ JSON.parse($('ia').item.json.stdout).res.body }}\n\nRESULT\n{{ JSON.stringify($json) }}\nEOF\n\nDIR_RESUME=\"/data/gamegen/context/message\"\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\necho \"iteration {{ $runIndex }}\"\necho \"\"\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone\n\n\n\n"
+        "command": "=CONTEXT_FILE=\"/data/gamegen/context\"\nDIR=\"/data/gamegen/context/queque\"\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\nPROMPT_FILE_PATH_EXEC=\"/home/node/python/prompt_exec.txt\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S')-$RANDOM.txt\"\n\n# Escribir directamente al archivo\ncat <<EOF > \"$DIR/$FILENAME\"\nINTRUCTION\n$(cat \"$PROMPT_FILE_PATH\")\n\nRESULT\n$(cat \"$PROMPT_FILE_PATH_EXEC\")\nEOF\n\ncat <<EOF > \"$PROMPT_FILE_PATH\"\nOUTPUT:\n$(cat \"$PROMPT_FILE_PATH_EXEC\")\nEOF\n\nDIR_RESUME=\"/data/gamegen/context/message\"\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR_RESUME\" ]; then\n    mkdir -p \"$DIR_RESUME\"\nfi\n\necho \"iteration {{ $runIndex }}\"\necho \"\"\n\nfor archivo in \"$DIR_RESUME\"/*; do\n  # Verifica que sea un archivo (y no una subcarpeta)\n  if [ -f \"$archivo\" ]; then\n      cat \"$archivo\"\n      rm -f \"$archivo\"\n      echo \"\" # Imprime el salto de línea extra\n  fi\ndone\n\n\n\n"
       },
       "name": "quequeContext",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1120,
+        -224,
         160
       ],
-      "id": "f63c0f3e-0144-4e4b-922e-819eb66a1db1",
+      "id": "e6694c4c-dcb2-45be-b7f5-45226ae23a25",
       "onError": "continueRegularOutput"
     },
     {
@@ -24,11 +24,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1232,
+        -2560,
         128
       ],
       "typeVersion": 1,
-      "id": "3ef2bdd0-b197-4144-afab-ddff8c511264",
+      "id": "eb1e28c1-42cc-488d-ada8-d7f4dc32bbcb",
       "name": "Sticky Note1"
     },
     {
@@ -37,11 +37,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1568,
+        -2896,
         144
       ],
       "typeVersion": 1,
-      "id": "c1f600a6-0687-4a3f-97e7-2ac808f24883",
+      "id": "4a07cb11-4ad8-4273-9bdd-1be04d8c663b",
       "name": "Sticky Note2"
     },
     {
@@ -73,24 +73,24 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        112,
+        -1216,
         176
       ],
-      "id": "3e8e9ddf-2c49-443c-9e32-e9b9398a3591",
+      "id": "cd5c0c85-947c-4802-b1d6-6df576133acc",
       "name": "If1"
     },
     {
       "parameters": {
-        "command": "=#!/bin/bash\n#set var\nsed -i '/export SESSION_ID=/d' ~/.bashrc\necho \"export SESSION_ID={{$('chat').item.json.sessionId}}\" >> ~/.bashrc\nsource ~/.bashrc\n\n# Lee los argumentos de n8n:\nPREV_NODE=\"{{ $prevNode.name }}\"\n\nif [ \"$PREV_NODE\" = \"initWatcher\" ]; then\n    INPUT_MESSAGE='{{ $('chat').item.json.chatInput }}'\nelse\n    INPUT_MESSAGE=$(cat <<'EOF'\n      {{(()=>{\n        try {return JSON.stringify($('terminal').item.json).replace(\"'\", \"\")}\n        catch {return \"\"}\n      })()}}\nEOF\n)\nfi\n\n# echo \"$PREV_NODE\"\n# echo \"$INPUT_MESSAGE\"\n\n# 1. Variables y Rutas\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\nSHOULD_CONTINUE=\"true\"  # Por defecto, continuar\n\n# Creamos la carpeta si no existe\nmkdir -p \"$(dirname \"$PROMPT_FILE_PATH\")\"\n\n# 2. Detección de Palabra Clave y Asignación de Modo (Limpiar y Guardar)\n\n# Convertimos el mensaje a mayúsculas para la detección (usaremos grep -q para IF)\nUPPER_MESSAGE=$(echo \"$INPUT_MESSAGE\" | tr '[:lower:]' '[:upper:]')\nMODE=\"DEFAULT\"\n\n# Prioridad 1: FLOW_FINISH (Máxima prioridad)\nif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_FINISH'; then\n    MODE=\"FINISH\"\n    CLEAN_MESSAGE=\"\"\n    SHOULD_CONTINUE=\"false\"\n    \n    # Prioridad 2: FLOW_INITIAL\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_INITIAL'; then\n    MODE=\"INITIAL\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_INITIAL//i' -e 's/^[[:space:]]*//')\n    \n    # Prioridad 3: FLOW_CONTINUE\n    elif echo \"$UPPER_MESSAGE\" | grep -q 'FLOW_CONTINUE'; then\n    MODE=\"CONTINUE\"\n    # Quita la palabra clave del inicio del mensaje\n    CLEAN_MESSAGE=$(echo \"$INPUT_MESSAGE\" | sed -e 's/FLOW_CONTINUE//i' -e 's/^[[:space:]]*//')\n    \nelse\n    MODE=\"DEFAULT\"\n    CLEAN_MESSAGE=\"$INPUT_MESSAGE\"\nfi\n\n# 3. Lógica del Switch y Construcción del Prompt con Here Document\n\n# Usamos una variable para construir el contenido final del prompt.txt\nFINAL_PROMPT_CONTENT=\"\"\n\ncase \"$MODE\" in\n    \"INITIAL\")\n        # Concatena el archivo de contexto estático y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_INITIAL\n$(cat /prompt/initial.txt)\n\n$CLEAN_MESSAGE\nEOF_INITIAL\n    ;;\n    \n    \"CONTINUE\")\n        # Concatena el archivo de contexto estático, el mensaje limpio y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_CONTINUE\n$(cat \"/prompt/initial.txt\")\n\n$(cat \"/prompt/continue.txt\")\n\n$CLEAN_MESSAGE\nEOF_CONTINUE\n    ;;\n    \n    \"FINISH\")\n        # El comando FINISH no necesita un prompt complejo, pero lo crea para consistencia.\n        FINAL_PROMPT_CONTENT=\"[FIN DE FLUJO]. No se requiere respuesta. shouldContinue=false\"\n    ;;\n    \n    \"DEFAULT\")\n        # Concatena el mensaje original y el JSON de input.\n        read -r -d '' FINAL_PROMPT_CONTENT <<EOF_DEFAULT\n$CLEAN_MESSAGE\nEOF_DEFAULT\n    ;;\nesac\n\n# 4. Guardar el Prompt Final en prompt.txt\n# Usamos 'echo -e' para asegurar que los saltos de línea se interpreten correctamente.\necho \"$FINAL_PROMPT_CONTENT\" > \"$PROMPT_FILE_PATH\"\n\n# 5. Imprimir la SALIDA JSON MÍNIMA (SOLO EL BOOLEANO)\n# Esto es lo único que n8n recibirá para el nodo IF.\necho \"$SHOULD_CONTINUE\"\n# cat \"$PROMPT_FILE_PATH\""
+        "command": "=#!/usr/bin/env bash\n\n# Robusto: si algo falla, NO rompemos el nodo; devolvemos \"true\"\n# y dejamos el error registrado dentro del prompt.\nset -u\nset -o pipefail\n\nPROCESS_NAME=\"PromptRouter\"\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\n\nCTX_INITIAL=\"/prompt/initial.txt\"\nCTX_CONTINUE=\"/prompt/continue.txt\"\n\nSHOULD_CONTINUE=\"true\"\nMODE=\"DEFAULT\"\n\n# --- helpers ---\nnow_iso() { date -u +\"%Y-%m-%dT%H:%M:%SZ\"; }\n\nappend_error_to_prompt() {\n  local step=\"${1:-unknown_step}\"\n  local msg=\"${2:-unknown_error}\"\n\n  # Intento best-effort: si no se puede escribir, al menos seguimos.\n  {\n    echo\n    echo \"-----[ERROR]-----\"\n    echo \"timestamp: $(now_iso)\"\n    echo \"process: $PROCESS_NAME\"\n    echo \"step: $step\"\n    echo \"detail: $msg\"\n    echo \"note: Se devolvió SHOULD_CONTINUE=true para no romper el flujo.\"\n    echo \"-----------------\"\n    echo\n  } >> \"$PROMPT_FILE_PATH\" 2>/dev/null || true\n}\n\nfail_open() {\n  local step=\"$1\"\n  local msg=\"$2\"\n  append_error_to_prompt \"$step\" \"$msg\"\n  echo \"true\"\n  exit 0\n}\n\nsafe_cat() {\n  # Imprime el archivo si existe, si no imprime vacío (sin fallar).\n  local f=\"$1\"\n  if [ -f \"$f\" ]; then\n    cat \"$f\"\n  else\n    echo \"\"\n  fi\n}\n\n# --- prechecks ---\nmkdir -p \"$(dirname \"$PROMPT_FILE_PATH\")\" 2>/dev/null || fail_open \"mkdir_prompt_dir\" \"No se pudo crear el directorio de $PROMPT_FILE_PATH\"\n\n# Si prompt.txt no existe, lo creamos vacío para evitar fallos.\ntouch \"$PROMPT_FILE_PATH\" 2>/dev/null || fail_open \"touch_prompt\" \"No se pudo crear/asegurar $PROMPT_FILE_PATH\"\n\n# Leemos el contenido completo del prompt\nINPUT_MESSAGE=\"$(cat \"$PROMPT_FILE_PATH\" 2>/dev/null)\" || fail_open \"read_prompt\" \"No se pudo leer $PROMPT_FILE_PATH\"\n\n# Normalizamos para detección (sin reventar por locales raros)\nUPPER_MESSAGE=\"$(printf \"%s\" \"$INPUT_MESSAGE\" | tr '[:lower:]' '[:upper:]' 2>/dev/null || true)\"\n\n# --- detección de modo ---\n# Prioridad: FINISH > INITIAL > CONTINUE > DEFAULT\nif printf \"%s\" \"$UPPER_MESSAGE\" | grep -q 'FLOW_FINISH' 2>/dev/null; then\n  MODE=\"FINISH\"\n  SHOULD_CONTINUE=\"false\"\nelif printf \"%s\" \"$UPPER_MESSAGE\" | grep -q 'FLOW_INITIAL' 2>/dev/null; then\n  MODE=\"INITIAL\"\nelif printf \"%s\" \"$UPPER_MESSAGE\" | grep -q 'FLOW_CONTINUE' 2>/dev/null; then\n  MODE=\"CONTINUE\"\nelse\n  MODE=\"DEFAULT\"\nfi\n\n# Limpieza del keyword SOLO para INITIAL/CONTINUE\n# (quitamos la palabra clave donde aparezca, y limpiamos espacios iniciales)\nCLEAN_MESSAGE=\"$INPUT_MESSAGE\"\nif [ \"$MODE\" = \"INITIAL\" ]; then\n  CLEAN_MESSAGE=\"$(printf \"%s\" \"$INPUT_MESSAGE\" | sed -e 's/FLOW_INITIAL//Ig' -e 's/^[[:space:]]*//' 2>/dev/null || printf \"%s\" \"$INPUT_MESSAGE\")\"\nelif [ \"$MODE\" = \"CONTINUE\" ]; then\n  CLEAN_MESSAGE=\"$(printf \"%s\" \"$INPUT_MESSAGE\" | sed -e 's/FLOW_CONTINUE//Ig' -e 's/^[[:space:]]*//' 2>/dev/null || printf \"%s\" \"$INPUT_MESSAGE\")\"\nfi\n\n# --- construir prompt final ---\nTMP_OUT=\"$(mktemp 2>/dev/null)\" || fail_open \"mktemp\" \"No se pudo crear archivo temporal\"\ncleanup() { rm -f \"$TMP_OUT\" 2>/dev/null || true; }\ntrap cleanup EXIT\n\n{\n  case \"$MODE\" in\n    \"INITIAL\")\n      safe_cat \"$CTX_INITIAL\"\n      echo\n      printf \"%s\" \"$CLEAN_MESSAGE\"\n      ;;\n    \"CONTINUE\")\n      safe_cat \"$CTX_INITIAL\"\n      echo\n      safe_cat \"$CTX_CONTINUE\"\n      echo\n      printf \"%s\" \"$CLEAN_MESSAGE\"\n      ;;\n    \"FINISH\")\n      echo \"[FIN DE FLUJO]\"\n      echo \"No se requiere respuesta.\"\n      echo \"shouldContinue=false\"\n      ;;\n    \"DEFAULT\")\n      printf \"%s\" \"$CLEAN_MESSAGE\"\n      ;;\n  esac\n} > \"$TMP_OUT\" 2>/dev/null || {\n  append_error_to_prompt \"build_prompt\" \"Falló la construcción del prompt (MODE=$MODE).\"\n  echo \"true\"\n  exit 0\n}\n\n# Escritura atómica (evita archivos corruptos si algo muere a mitad)\nmv \"$TMP_OUT\" \"$PROMPT_FILE_PATH\" 2>/dev/null || {\n  append_error_to_prompt \"write_prompt\" \"No se pudo escribir en $PROMPT_FILE_PATH (MODE=$MODE).\"\n  echo \"true\"\n  exit 0\n}\n\n# --- salida mínima para n8n IF ---\necho \"$SHOULD_CONTINUE\"\nexit 0\n"
       },
       "name": "terminal1",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -128,
+        -1456,
         176
       ],
-      "id": "4edc3406-35af-415e-9e09-2719d331f9b5",
+      "id": "88dd8694-f185-4cae-8522-ccde5a85a0d8",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
@@ -104,10 +104,10 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.3,
       "position": [
-        -608,
+        -1936,
         176
       ],
-      "id": "680e6b9d-551a-459e-bc13-e74a01c1442c",
+      "id": "89daf40f-fe24-47f9-b936-055209102c2e",
       "name": "chat",
       "webhookId": "13e346db-a58c-4761-b613-3abd74cdf050"
     },
@@ -120,10 +120,10 @@
       "type": "@n8n/n8n-nodes-langchain.chat",
       "typeVersion": 1,
       "position": [
-        1600,
+        96,
         160
       ],
-      "id": "9d3acc79-c980-42c4-814f-7402bd69cf4a",
+      "id": "2ee2c422-cb8c-4ac4-91ff-446f0b316140",
       "name": "Respond to Chat3",
       "onError": "continueRegularOutput"
     },
@@ -135,10 +135,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        464,
+        -864,
         352
       ],
-      "id": "abd875c4-8ae5-4d0d-855d-3e929b4657b1",
+      "id": "f503bd4c-9d3b-404e-b1fe-7cd9d11af7a1",
       "onError": "continueRegularOutput"
     },
     {
@@ -150,10 +150,10 @@
       "type": "@n8n/n8n-nodes-langchain.chat",
       "typeVersion": 1,
       "position": [
-        784,
+        -544,
         352
       ],
-      "id": "57b0fcff-2858-43cc-8b77-d8f59d6c696f",
+      "id": "66fa6ffc-fcc9-4ed0-8ccd-02101f1fbf0a",
       "name": "Respond to Chat",
       "onError": "continueRegularOutput"
     },
@@ -165,25 +165,25 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        464,
+        -864,
         160
       ],
-      "id": "bcf6608f-0712-43c8-855c-f00281193e7d",
+      "id": "dd251575-ee61-4f60-bb43-630fb8c0f711",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "command": "=#!/usr/bin/env bash\n\nDIR=\"/data/gamegen/context/queque\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S').txt\"\n\n# Escribir directamente al archivo\ncat <<EOF > \"$DIR/$FILENAME\"\nFirst process instructions from flow automa generator:\n\"\"\"\n{{ $json.chatInput }}\n\"\"\"\nEOF\n\n\n# Init queue\n\nSCRIPT=\"/home/node/python/queue_watcher.py\"\n\nif pgrep -f \"python3 .*${SCRIPT}\" > /dev/null; then\n  echo \"queue_watcher.py ya está corriendo\"\n  exit 0\nfi\n\necho \"Iniciando queue_watcher.py en segundo plano...\"\nnohup python3 \"$SCRIPT\" > /home/node/python/queue_watcher.log 2>&1 &\n"
+        "command": "=#!/usr/bin/env bash\n\nDIR=\"/data/gamegen/context/queque\"\nPROMPT_FILE_PATH=\"/home/node/python/prompt.txt\"\n\n# Crear la carpeta si no existe\nif [ ! -d \"$DIR\" ]; then\n    mkdir -p \"$DIR\"\nfi\n\n# Crear archivo con fecha y hora actual\nFILENAME=\"$(date '+%Y-%m-%d_%H-%M-%S').txt\"\n\n# Escribir directamente al archivo\ncat <<EOF > \"$DIR/$FILENAME\"\nFirst process instructions from flow automa generator:\n\"\"\"\n{{ $json.chatInput }}\n\"\"\"\nEOF\n\ncat <<EOF > \"$PROMPT_FILE_PATH\"\n{{ $json.chatInput }}\nEOF\n\n# Init queue\n\nSCRIPT=\"/home/node/python/queue_watcher.py\"\n\nif pgrep -f \"python3 .*${SCRIPT}\" > /dev/null; then\n  echo \"queue_watcher.py ya está corriendo\"\n  exit 0\nfi\n\necho \"Iniciando queue_watcher.py en segundo plano...\"\nnohup python3 \"$SCRIPT\" > /home/node/python/queue_watcher.log 2>&1 &\n"
       },
       "name": "initWatcher",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -384,
+        -1712,
         176
       ],
-      "id": "59cfe97c-595c-41ff-99f7-e7a5de84bfed",
+      "id": "8e3c7879-24d2-4b3b-b32d-9c5e30c035c5",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
@@ -195,10 +195,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        1120,
+        -208,
         352
       ],
-      "id": "2be571e0-1511-446c-8a67-80025a86572c",
+      "id": "94bbc8e0-fb6a-4e69-a64c-1356bf3b69a7",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
@@ -210,25 +210,25 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        464,
+        -864,
         544
       ],
-      "id": "eb976ec6-8dad-4790-9cc4-7c7f770c05cf",
+      "id": "1aad8b42-1eff-45d8-8686-1c352e826d7e",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "command": "=sleep 2;\nif [ \"{{$runIndex}}\" = \"15\" ]; then\n  echo \"echo FLOW_FINISH\"\nelse\n  echo \"echo hola_mundo\"\nfi"
+        "command": "=sleep 2\n\nif [ \"{{$runIndex}}\" = \"5\" ]; then\n  echo '{\"res\":{\"body\":\"cat > /home/node/projects/hola_mundo_py/main.py <<'\\''EOF'\\''\\n#!/usr/bin/env python3\\n\\n# -*- coding: utf-8 -*-\\n\\nANSI_RESET = \\\"\\\\033[0m\\\"\\nRAINBOW_SEQ = [\\\"\\\\033[31m\\\", \\\"\\\\033[33m\\\", \\\"\\\\033[32m\\\", \\\"\\\\033[36m\\\", \\\"\\\\033[34m\\\", \\\"\\\\033[35m\\\"]\\n\\ndef rainbow(text: str) -> str:\\n    out = []\\n    j = 0\\n    for ch in text:\\n        if ch == \\\"\\\\n\\\":\\n            out.append(ch)\\n            continue\\n        out.append(RAINBOW_SEQ[j % len(RAINBOW_SEQ)] + ch)\\n        j += 1\\n    out.append(ANSI_RESET)\\n    return \\\"\\\".join(out)\\n\\nif __name__ == \\\"__main__\\\":\\n    print(rainbow(\\\"Hola Mundo\\\"))\\nEOF\\n\\npython3 /home/node/projects/hola_mundo_py/main.py >> /home/node/python/prompt_exec.txt 2>&1\"}}\"\n\nelse\n  echo '{\"res\":{\"body\":\"python3 /home/node/python/context_cli.py files >> /home/node/python/prompt_exec.txt\"}}'\nfi"
       },
       "name": "ia1",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        176,
+        -1152,
         -112
       ],
-      "id": "e938ae9d-1719-493d-8888-a0102734994d",
+      "id": "f623e6f8-8c0e-4410-88ce-48b50a2517a7",
       "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     },
@@ -241,10 +241,10 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        768,
-        -80
+        -1456,
+        -112
       ],
-      "id": "29e00a5c-e051-4ba3-9635-cc79b5c26476",
+      "id": "cc2c1223-cf82-4980-8427-c3e9964653a7",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false,
@@ -252,16 +252,16 @@
     },
     {
       "parameters": {
-        "command": "={{(()=>{\n    const body = JSON.parse($json.stdout).res.body;\n\n    if (body === \"FLOW_FINISH\") {\n      return 'echo \"FLOW_FINISH\"'\n    } else {\n      return body\n    }\n})()}}"
+        "command": "=truncate -s 0 /home/node/python/prompt_exec.txt\n\n{{(()=>{\n    if($json?.stdout){\n    const body = JSON.parse($json.stdout).res.body;\n\n    if (body === \"FLOW_FINISH\") {\n        return 'echo \"FLOW_FINISH\" >> /home/node/python/prompt_exec.txt';\n    }\n\n    return body\n        .replace(/\\r?\\n/g, '; ')   // elimina saltos de línea\n        .replace(/\\t/g, ' ')     // elimina tabs\n        .trim();                 // elimina espacios al inicio/fin\n} else {return $json.error}\n})()}}"
       },
       "name": "terminal",
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        784,
+        -544,
         160
       ],
-      "id": "095cf57b-2db4-4302-b356-c27c3133c94f",
+      "id": "8b532450-cf2b-4a5b-829c-c9ee832e1a26",
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false,
@@ -365,11 +365,6 @@
         ]
       ]
     },
-    "ia1": {
-      "main": [
-        []
-      ]
-    },
     "ia": {
       "main": [
         [
@@ -379,11 +374,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "terminalTest": {
-      "main": [
-        []
       ]
     },
     "terminal": {
@@ -396,13 +386,23 @@
           }
         ]
       ]
+    },
+    "ia1": {
+      "main": [
+        []
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "timeSavedPerExecution": 3,
+    "errorWorkflow": "CY5uX8ardFkI9EhF"
   },
-  "versionId": "01ff93f5-bc53-43b9-a77c-cb66d2e8bd81",
+  "versionId": "21421f5f-0eb0-4d51-b47f-6ff1791f3ec5",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "61e1d8d77c41f5ba55f79c5e8b1b58bc806e2de256ae8078f33364e0c1ab6e47"
