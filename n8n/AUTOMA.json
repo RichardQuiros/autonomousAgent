@@ -9,8 +9,8 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -224,
-        160
+        -240,
+        48
       ],
       "id": "e6694c4c-dcb2-45be-b7f5-45226ae23a25",
       "onError": "continueRegularOutput"
@@ -18,14 +18,14 @@
     {
       "parameters": {
         "content": "# Motor de IA\n### Se encarga de mantener vivo las consultas para la IA",
-        "height": 368,
+        "height": 640,
         "width": 3040,
         "color": 6
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
         -2560,
-        128
+        -16
       ],
       "typeVersion": 1,
       "id": "eb1e28c1-42cc-488d-ada8-d7f4dc32bbcb",
@@ -120,8 +120,8 @@
       "type": "@n8n/n8n-nodes-langchain.chat",
       "typeVersion": 1,
       "position": [
-        96,
-        160
+        208,
+        48
       ],
       "id": "2ee2c422-cb8c-4ac4-91ff-446f0b316140",
       "name": "Respond to Chat3",
@@ -135,8 +135,8 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -864,
-        352
+        -880,
+        480
       ],
       "id": "f503bd4c-9d3b-404e-b1fe-7cd9d11af7a1",
       "onError": "continueRegularOutput"
@@ -151,7 +151,7 @@
       "typeVersion": 1,
       "position": [
         -544,
-        352
+        480
       ],
       "id": "66fa6ffc-fcc9-4ed0-8ccd-02101f1fbf0a",
       "name": "Respond to Chat",
@@ -195,8 +195,8 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -208,
-        352
+        -256,
+        480
       ],
       "id": "94bbc8e0-fb6a-4e69-a64c-1356bf3b69a7",
       "alwaysOutputData": false,
@@ -210,8 +210,8 @@
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [
-        -864,
-        544
+        -896,
+        672
       ],
       "id": "1aad8b42-1eff-45d8-8686-1c352e826d7e",
       "alwaysOutputData": false,
@@ -226,7 +226,7 @@
       "typeVersion": 1,
       "position": [
         -1152,
-        -112
+        -256
       ],
       "id": "f623e6f8-8c0e-4410-88ce-48b50a2517a7",
       "alwaysOutputData": false,
@@ -242,7 +242,7 @@
       "typeVersion": 1,
       "position": [
         -1456,
-        -112
+        -256
       ],
       "id": "cc2c1223-cf82-4980-8427-c3e9964653a7",
       "alwaysOutputData": false,
@@ -252,7 +252,7 @@
     },
     {
       "parameters": {
-        "command": "=truncate -s 0 /home/node/python/prompt_exec.txt\n\n{{(()=>{\n    if($json?.stdout){\n    const body = JSON.parse($json.stdout).res.body;\n\n    if (body === \"FLOW_FINISH\") {\n        return 'echo \"FLOW_FINISH\" >> /home/node/python/prompt_exec.txt';\n    }\n\n    return body\n        .replace(/\\r?\\n/g, '; ')   // elimina saltos de línea\n        .replace(/\\t/g, ' ')     // elimina tabs\n        .trim();                 // elimina espacios al inicio/fin\n} else {return $json.error}\n})()}}"
+        "command": "=truncate -s 0 /home/node/python/prompt_exec.txt\n\n{{(()=>{\n    if($json?.stdout){\n    const body = JSON.parse($json.stdout).res.body;\n\n    if (body === \"FLOW_FINISH\") {\n        return 'echo \"FLOW_FINISH\" >> /home/node/python/prompt_exec.txt';\n    }\n    body.replace(\"FLOW_FINISH\", \"\")\n    return body\n        .replace(/\\r?\\n/g, '; ')   // elimina saltos de línea\n        .replace(/\\t/g, ' ')     // elimina tabs\n        .trim();                 // elimina espacios al inicio/fin\n} else {return $json.error}\n})()}}"
       },
       "name": "terminal",
       "type": "n8n-nodes-base.executeCommand",
@@ -265,6 +265,36 @@
       "alwaysOutputData": false,
       "executeOnce": false,
       "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "command": "=SOCKET_HOST=host.docker.internal\nSOCKET_HOST_POCKET=7346\n\n#python3 /data/pocket/python/cli.py openOrder \"#AAPL_otc\" 1 call 5 1234 100 1\n\n#python3 /data/pocket/python/cli.py suscribeAssets \"#AAPL_otc\"\n\n#cat /data/pocket/faq/general.md \n\ncat /data/pocket/faq/data_explain.md\n\ncat /data/pocket/faq/logs/index.md"
+      },
+      "name": "operation",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -256
+      ],
+      "id": "d961875f-a237-4f9b-9abf-c650682366db",
+      "alwaysOutputData": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "command": "=DIR=/home/node/python/prompt_exec.txt\n\ncat <<EEOOFF > \"$DIR\"\nError:\n{{ $json.error }}\n\nMore details:\n$(cat \"$DIR\")\nEEOOFF\n"
+      },
+      "name": "error",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        288
+      ],
+      "id": "318551a1-70a5-45d4-a125-f70e9cc9f3c7",
+      "alwaysOutputData": false,
       "onError": "continueRegularOutput"
     }
   ],
@@ -384,12 +414,30 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "ia1": {
       "main": [
         []
+      ]
+    },
+    "error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Chat3",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -402,7 +450,7 @@
     "timeSavedPerExecution": 3,
     "errorWorkflow": "CY5uX8ardFkI9EhF"
   },
-  "versionId": "21421f5f-0eb0-4d51-b47f-6ff1791f3ec5",
+  "versionId": "988b4946-51a0-4331-b223-cc707c019064",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "61e1d8d77c41f5ba55f79c5e8b1b58bc806e2de256ae8078f33364e0c1ab6e47"

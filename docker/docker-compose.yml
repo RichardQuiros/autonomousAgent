@@ -82,7 +82,7 @@ services:
       - n8n_data:/home/node/.n8n
       - ./entry.sh:/entry.sh
       - ${USERPROFILE}/.ssh:/home/shh
-      - ../python:/home/node/pythonw
+      - ../python:/home/node/python
       - ./projects:/home/node/projects
       - ./context:/data/gamegen/context
       - ../prompt:/prompt

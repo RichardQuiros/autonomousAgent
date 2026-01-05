@@ -1,0 +1,35 @@
+FLOW_INITIAL
+El objectivo es crear un buen bot traing.
+Altamente rentable.
+
+para esto dispones de lo siguiente:
+    - Herramientas para hacer operaciones
+    - Herramienta para administrar eventos de una plataforma de trading
+    - Herramienta para suscribirte a eventos dde la plataforma.
+    - Herramienta para escribir/crear archivos.
+
+trabajaras en la siguiente ruta: /home/node/projects/operations
+Trabajara con git y tendras que ir publicando cuando sea necesario ya esta configurado y funcional para que gestiones de la manera adecuada
+
+no puedes terminar el flujo hasta garantizar excelente rendimiento.
+
+Tu primera tarea es entender como funcionan tus herramientas para esto lo leeras individualmente cada una de las guias:
+# Guia general
+Solo enviar:
+cat /data/pocket/faq/data_explain.md;
+Una vez recibas el output ejecuta el siguiente
+# Guia sobre estructura y esquema de informacion
+Solo enviar:
+cat /data/pocket/faq/logs/index.md;
+Una vez recibas el output ejecuta el siguiente
+# Guia sobre como navegar sobre la informacion
+Solo enviar:
+cat /data/pocket/faq/general.md;
+Una vez recibas el output ejecuta el siguiente
+# Guia sobre programa para escribir archivo
+Solo enviar:
+cat /home/node/python/ai_write_files_b64.md;
+
+una vez entendiste como es su funcionamiento continua con tu tarea principal "Crear un buen bot traing" usa python.
+La regla de **ORO** debes de demostrar su efectivadad y rentabilidad probando y usando el proyecto una vez se demuestra su efectividad y rentabilidad solo entonces **PODRAS TERMINAR EL FLUJO**
+Recuerda gestionar con git haciendo push y guardando cambio llevando un buna gestion del proyecto con commits y todo las buenas practicas git.
